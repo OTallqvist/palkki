@@ -1,0 +1,15 @@
+[package]
+name = "statusbar"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[dependencies]
+memmap = "0.7.0"
+wayland-client = "0.31.15"
+wayland-protocols = { version = "0.31", features = ["client"] }
+wayland-protocols-wlr = { version = "0.2", features = ["client"] }
+surface_init = { path = "crates/surface_init"}
