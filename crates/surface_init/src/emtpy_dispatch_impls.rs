@@ -9,6 +9,7 @@ impl<D: Drawer> Dispatch<wl_compositor::WlCompositor, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
 
@@ -21,6 +22,7 @@ impl<D: Drawer> Dispatch<wl_shm::WlShm, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
 
@@ -33,6 +35,7 @@ impl<D: Drawer> Dispatch<zwlr_layer_shell_v1::ZwlrLayerShellV1, ()> for State<D>
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
 
@@ -45,6 +48,7 @@ impl<D: Drawer> Dispatch<wl_surface::WlSurface, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
 
@@ -57,6 +61,7 @@ impl<D: Drawer> Dispatch<wl_shm_pool::WlShmPool, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
 
@@ -69,6 +74,7 @@ impl<D: Drawer> Dispatch<wayland_client::protocol::wl_buffer::WlBuffer, ()> for 
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
 
@@ -81,5 +87,6 @@ impl<D: Drawer> Dispatch<WlRegistry, GlobalListContents> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        println!("dispatched");
     }
 }
