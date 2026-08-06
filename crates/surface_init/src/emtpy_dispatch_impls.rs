@@ -1,6 +1,6 @@
 use super::*;
 // Required Dispatch impls (empty unless needed)
-impl<D: Drawer> Dispatch<wl_compositor::WlCompositor, ()> for State<D> {
+impl Dispatch<wl_compositor::WlCompositor, ()> for State {
     fn event(
         _: &mut Self,
         _: &wl_compositor::WlCompositor,
@@ -9,11 +9,10 @@ impl<D: Drawer> Dispatch<wl_compositor::WlCompositor, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }
 
-impl<D: Drawer> Dispatch<wl_shm::WlShm, ()> for State<D> {
+impl Dispatch<wl_shm::WlShm, ()> for State {
     fn event(
         _: &mut Self,
         _: &wl_shm::WlShm,
@@ -22,11 +21,10 @@ impl<D: Drawer> Dispatch<wl_shm::WlShm, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }
 
-impl<D: Drawer> Dispatch<zwlr_layer_shell_v1::ZwlrLayerShellV1, ()> for State<D> {
+impl Dispatch<zwlr_layer_shell_v1::ZwlrLayerShellV1, ()> for State {
     fn event(
         _: &mut Self,
         _: &zwlr_layer_shell_v1::ZwlrLayerShellV1,
@@ -35,11 +33,10 @@ impl<D: Drawer> Dispatch<zwlr_layer_shell_v1::ZwlrLayerShellV1, ()> for State<D>
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }
 
-impl<D: Drawer> Dispatch<wl_surface::WlSurface, ()> for State<D> {
+impl Dispatch<wl_surface::WlSurface, ()> for State {
     fn event(
         _: &mut Self,
         _: &wl_surface::WlSurface,
@@ -48,11 +45,10 @@ impl<D: Drawer> Dispatch<wl_surface::WlSurface, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }
 
-impl<D: Drawer> Dispatch<wl_shm_pool::WlShmPool, ()> for State<D> {
+impl Dispatch<wl_shm_pool::WlShmPool, ()> for State {
     fn event(
         _: &mut Self,
         _: &wl_shm_pool::WlShmPool,
@@ -61,11 +57,10 @@ impl<D: Drawer> Dispatch<wl_shm_pool::WlShmPool, ()> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }
 
-impl<D: Drawer> Dispatch<wayland_client::protocol::wl_buffer::WlBuffer, ()> for State<D> {
+impl Dispatch<wayland_client::protocol::wl_buffer::WlBuffer, ()> for State {
     fn event(
         _: &mut Self,
         _: &wayland_client::protocol::wl_buffer::WlBuffer,
@@ -74,11 +69,10 @@ impl<D: Drawer> Dispatch<wayland_client::protocol::wl_buffer::WlBuffer, ()> for 
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }
 
-impl<D: Drawer> Dispatch<WlRegistry, GlobalListContents> for State<D> {
+impl Dispatch<WlRegistry, GlobalListContents> for State {
     fn event(
         _: &mut Self,
         _: &WlRegistry,
@@ -87,6 +81,5 @@ impl<D: Drawer> Dispatch<WlRegistry, GlobalListContents> for State<D> {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("dispatched");
     }
 }

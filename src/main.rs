@@ -1,72 +1,38 @@
+mod ram;
+mod widget;
 const BAR_HEIGHT: u32 = 20;
-use surface_init::*;
+use std::mem;
 
-struct BarDrawerState {
-    font: fontdue::Font,
+use surface_init::*;
+use widget::*;
+
+struct BarDrawerState<'a> {
+    fonts: &'a [fontdue::Font],
     offset: usize,
     first_render: bool,
+    widgets: Vec<(Box<dyn Widget>, Block)>,
 }
 
-impl BarDrawerState {
-    fn new() -> Self {
+impl<'a> BarDrawerState<'a> {
+    fn new(fonts: &'a [fontdue::Font]) -> Self {
         Self {
-            font: fontdue::Font::from_bytes(
-                include_bytes!("/usr/share/fonts/0xProto/0xProtoNerdFont-Regular.ttf") as &[u8],
-                fontdue::FontSettings::default(),
-            )
-            .unwrap(),
+            fonts,
             offset: 0,
             first_render: true,
+            widgets: vec![],
         }
     }
-}
-
-#[repr(C)]
-struct Pixel {
-    pub b: u8,
-    pub g: u8,
-    pub r: u8,
-    pub a: u8,
-}
-
-struct PixBuf<'a> {
-    width: usize,
-    height: usize,
-    buf: &'a mut [Pixel],
-}
-
-impl<'a> PixBuf<'a> {
-    fn new(buf: &'a mut [u8], width: usize, height: usize) -> Self {
-        assert!(buf.len().is_multiple_of(size_of::<Pixel>()));
-        let ptr = buf.as_mut_ptr();
-        assert!((ptr as usize).is_multiple_of(align_of::<Pixel>()));
-        Self {
-            width,
-            height,
-            buf: unsafe {
-                std::slice::from_raw_parts_mut(ptr as *mut Pixel, buf.len() / size_of::<Pixel>())
-            },
-        }
-    }
-    fn index_from_position(&self, position: Vec2) -> usize {
-        self.width * position.y as usize + position.x as usize
-    }
-    fn mutate_pixel(&mut self, position: Vec2) -> &mut Pixel {
-        self.buf
-            .get_mut(self.index_from_position(position))
-            .unwrap_or_else(|| {
-                panic!(
-                    "Attempt at out of bounds write to pixel ({}, {})",
-                    position.x, position.y
-                )
-            })
+    fn add_widget(&mut self, widget: Box<dyn Widget>, wl_data: &WlData) {
+        let block = Block::for_widget(widget.as_ref(), wl_data.surface_size());
+        self.widgets.push((widget, block));
     }
 }
 
 fn draw_bg(buffer: &mut PixBuf) {
     for y in 0..buffer.height {
-        for x in 0..buffer.width {
-            *buffer.mutate_pixel(Vec2::new(x as u32, y as u32)) = Pixel {
+        let line = buffer.mutate_line(Vec2::new(0, y as u32), buffer.width);
+        for px in line.iter_mut() {
+            *px = Pixel {
                 b: 0x00,
                 g: 0x00,
                 r: 0x00,
@@ -78,39 +44,57 @@ fn draw_bg(buffer: &mut PixBuf) {
 
 fn draw_moving_line(buffer: &mut PixBuf, state: &mut BarDrawerState) -> Damage {
     let line_width = 10;
-    for x in state.offset..state.offset + line_width {
-        for y in 0..buffer.height {
-            *buffer.mutate_pixel(Vec2::new(x as u32, y as u32)) = Pixel {
+    for y in 0..buffer.height {
+        let line = buffer.mutate_line(Vec2::new(state.offset as u32, y as u32), {
+            let overflow = (state.offset as i32 + line_width as i32 - buffer.width as i32).max(0);
+            line_width - overflow as usize
+        });
+        line.iter_mut().for_each(|px| {
+            *px = Pixel {
                 b: 0xFF,
                 g: 0x00,
                 r: 0x00,
                 a: 0xFF,
-            };
-        }
+            }
+        });
     }
     let step = 17;
     let line_damage = Damage::new(
-        ((state.offset - step).min(buffer.width - step) as u32, 0),
-        (line_width as u32 + step as u32, buffer.height as u32),
+        Vec2::new((state.offset - step).min(buffer.width - step) as u32, 0),
+        Vec2::new(line_width as u32 + step as u32, buffer.height as u32),
     );
     state.offset = (state.offset + step) % buffer.width;
     line_damage
 }
 
-impl Drawer for BarDrawerState {
+impl Drawer for BarDrawerState<'_> {
     fn draw(&mut self, buffer: &mut [u8], width: usize, height: usize) -> Vec<Damage> {
         let mut buffer = PixBuf::new(buffer, width, height);
+        let mut damage = vec![];
         draw_bg(&mut buffer);
-        let line_damage = draw_moving_line(&mut buffer, self);
+        for (widget, block) in self.widgets.iter_mut() {
+            let mut block = block.draw(&mut buffer);
+            widget.redraw(&mut block);
+            damage.push(mem::take(&mut block.damage));
+        }
+        // let line_damage = draw_moving_line(&mut buffer, self);
         if self.first_render {
             self.first_render = false;
-            vec![Damage::from_0_0((width as u32, height as u32))]
+            vec![Damage::from_0_0(Vec2::new(width as u32, height as u32))]
         } else {
-            vec![line_damage]
+            damage
         }
     }
 }
 
 fn main() {
-    init_bar_surface(BAR_HEIGHT, Box::new(BarDrawerState::new()));
+    let fonts = Box::leak(Box::new([fontdue::Font::from_bytes(
+        include_bytes!("/usr/share/fonts/arial/arial.ttf") as &[u8],
+        fontdue::FontSettings::default(),
+    )
+    .unwrap()]));
+    let mut state = Box::new(BarDrawerState::new(fonts));
+    let mut wl_data = init_bar_surface(BAR_HEIGHT);
+    state.add_widget(Box::new(ram::Ram::new(state.fonts)), &wl_data);
+    wl_data.render_loop(state);
 }
