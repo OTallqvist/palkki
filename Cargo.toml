@@ -13,3 +13,4 @@ wayland-client = "0.31.15"
 wayland-protocols = { version = "0.31", features = ["client"] }
 wayland-protocols-wlr = { version = "0.2", features = ["client"] }
 surface_init = { path = "crates/surface_init"}
+fontdue = "0.9.4"
