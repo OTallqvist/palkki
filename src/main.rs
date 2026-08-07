@@ -29,12 +29,9 @@ pub enum FontType {
 }
 
 impl TextLayout {
-    pub(crate) fn shape_text(&self, text: &str, px: f32, font: FontType) -> Vec<GlyphPosition> {
+    pub(crate) fn shape_text(&self, text: &str, px: f32, _font: FontType) -> Vec<GlyphPosition> {
         let mut layout = self.layout.lock().unwrap();
-        let font_index = match font {
-            //TODO: add more once more fonts exist
-            _ => 0,
-        };
+        let font_index = 0;
         layout.append(FONTS.as_ref(), &TextStyle::new(text, px, font_index));
         let glyphs = layout.glyphs().clone();
         layout.clear();
@@ -49,7 +46,7 @@ impl TextLayout {
     }
 }
 
-pub(crate) static TEXT_LAYOUT: LazyLock<TextLayout> = LazyLock::new(|| TextLayout::new());
+pub(crate) static TEXT_LAYOUT: LazyLock<TextLayout> = LazyLock::new(TextLayout::new);
 
 struct BarDrawerState {
     widgets: Box<WidgetTable>,
@@ -60,27 +57,23 @@ struct BarDrawerState {
 struct WidgetTable {
     left: Vec<(Box<dyn Widget>, Block)>,
     right: Vec<(Box<dyn Widget>, Block)>,
-    center: Vec<(Box<dyn Widget>, Block)>,
+    absolute_back: Vec<(Box<dyn Widget>, Block)>,
+    absolute_front: Vec<(Box<dyn Widget>, Block)>,
 }
 
 impl WidgetTable {
     fn draw_widgets(&mut self, buffer: &mut PixBuf) -> Vec<Damage> {
         let mut damage = vec![];
-        for (widget, block) in self.right.iter_mut() {
-            let mut block = block.draw(buffer);
-            widget.redraw(&mut block);
-            damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
-        }
-        for (widget, block) in self.center.iter_mut() {
-            let mut block = block.draw(buffer);
-            widget.redraw(&mut block);
-            damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
-        }
-        for (widget, block) in self.left.iter_mut() {
-            let mut block = block.draw(buffer);
-            widget.redraw(&mut block);
-            damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
-        }
+        self.absolute_back
+            .iter_mut()
+            .chain(self.right.iter_mut())
+            .chain(self.left.iter_mut())
+            .chain(self.absolute_front.iter_mut())
+            .for_each(|(widget, block)| {
+                let mut block = block.draw(buffer);
+                widget.redraw(&mut block);
+                damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
+            });
         damage
     }
 }
@@ -121,7 +114,27 @@ impl BarDrawerState {
                     Block::new(offset, Vec2::new(width, wl_data.surface_size().y)),
                 ));
             }
-            _ => todo!(),
+            P::Absolute {
+                offset,
+                width,
+                foreground,
+            } => {
+                let widget = (
+                    widget,
+                    Block::new(
+                        Vec2::from_x(offset),
+                        Vec2 {
+                            x: width,
+                            y: wl_data.surface_size().y,
+                        },
+                    ),
+                );
+                if foreground {
+                    self.widgets.absolute_front.push(widget);
+                } else {
+                    self.widgets.absolute_back.push(widget);
+                }
+            }
         };
     }
 }

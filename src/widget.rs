@@ -46,9 +46,17 @@ impl<'a> PixBuf<'a> {
 }
 
 pub(crate) enum Positioning {
-    LeftAlign { width: u32 },
-    RightAlign { width: u32 },
-    Center { width: u32 },
+    LeftAlign {
+        width: u32,
+    },
+    RightAlign {
+        width: u32,
+    },
+    Absolute {
+        offset: u32,
+        width: u32,
+        foreground: bool,
+    },
 }
 
 pub(crate) trait Widget {
@@ -123,11 +131,13 @@ impl DrawableBlock<'_, '_> {
                 let buf_line = self.mutate_line(char_pos + Vec2::from_y(y as u32), metrics.width);
                 buf_line.iter_mut().enumerate().for_each(|(x, px)| {
                     let bitmap_val = bitmap[stride * y + x];
-                    *px = Pixel {
-                        b: bitmap_val,
-                        g: bitmap_val,
-                        r: bitmap_val,
-                        a: 255,
+                    if bitmap_val > 0 {
+                        *px = Pixel {
+                            b: bitmap_val,
+                            g: bitmap_val,
+                            r: bitmap_val,
+                            a: 255,
+                        }
                     }
                 });
             }
