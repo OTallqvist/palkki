@@ -1,6 +1,7 @@
 use crate::DrawableBlock;
 use crate::Positioning;
 use crate::Widget;
+use crate::widget::TextPosition;
 use std::{
     fs::File,
     io::{Read, Seek},
@@ -22,14 +23,14 @@ fn get_total_ram(meminfo: &mut File) -> usize {
 }
 
 impl Ram {
-    pub(super) fn new() -> Self {
+    pub(super) fn new() -> Box<Self> {
         let mut meminfo = File::open("/proc/meminfo").unwrap();
         let total_ram = get_total_ram(&mut meminfo);
-        Self {
+        Box::new(Self {
             last_ram_usage: 0,
             total_ram,
             meminfo,
-        }
+        })
     }
     ///Ram usage in GB
     ///Returns None if the value didn't change since last update. And therefor the widget does not
@@ -69,7 +70,7 @@ fn ram_usage_to_str(usage: f32) -> String {
 }
 
 impl Widget for Ram {
-    fn postioning(&self) -> Positioning {
+    fn postioning(&self, _: Vec2) -> Positioning {
         Positioning::RightAlign { width: 60 }
     }
     fn redraw(&mut self, block: &mut DrawableBlock) {
@@ -77,7 +78,7 @@ impl Widget for Ram {
             return;
         };
         let usage = ram_usage_to_str(usage);
-        let _ = block.draw_text(&usage, 14., Vec2 { x: 5, y: 3 });
+        let _ = block.draw_text(&usage, 14., TextPosition::Absolute(Vec2 { x: 0, y: 3 }));
         block.damage = Damage::from_0_0(block.block.size)
     }
 }

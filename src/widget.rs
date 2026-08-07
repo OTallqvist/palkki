@@ -1,4 +1,4 @@
-use fontdue::layout::Layout;
+use fontdue::layout::{GlyphPosition, HorizontalAlign::Left, Layout};
 
 use crate::{Damage, TEXT_LAYOUT, Vec2};
 #[derive(Clone)]
@@ -43,6 +43,10 @@ impl<'a> PixBuf<'a> {
         assert!(position.x as usize + len <= self.width);
         &mut self.buf[idx..idx + len]
     }
+    pub(crate) fn mutate_pixel(&mut self, position: Vec2) -> &mut Pixel {
+        let idx = self.index_from_position(position);
+        self.buf.get_mut(idx).unwrap()
+    }
 }
 
 pub(crate) enum Positioning {
@@ -62,7 +66,7 @@ pub(crate) enum Positioning {
 pub(crate) trait Widget {
     fn redraw(&mut self, block: &mut DrawableBlock);
     ///Returns how the widget wants to be placed
-    fn postioning(&self) -> Positioning;
+    fn postioning(&self, bar_size: Vec2) -> Positioning;
 }
 
 pub(crate) struct Block {
@@ -95,6 +99,13 @@ pub(crate) struct DrawableBlock<'b, 'buffer> {
     pub(crate) damage: Damage,
 }
 
+pub(crate) enum TextPosition {
+    Absolute(Vec2),
+    Center,
+    Left { y: u32 },
+    Right { y: u32 },
+}
+
 impl DrawableBlock<'_, '_> {
     pub(crate) fn mutate_line(&mut self, mut position: Vec2, len: usize) -> &mut [Pixel] {
         if !(position.x + len as u32 <= self.block.width()) {
@@ -104,12 +115,59 @@ impl DrawableBlock<'_, '_> {
         let idx = self.buf.index_from_position(position);
         &mut self.buf.buf[idx..idx + len]
     }
-    pub(crate) fn vert_center(&self) -> u32 {
-        self.block.size.y / 2
-    }
-    pub(crate) fn draw_text(&mut self, str: &str, size: f32, position: Vec2) -> Result<(), ()> {
-        let mut res = Ok(());
+    ///Supports monospace left to right text
+    pub(crate) fn draw_text(
+        &mut self,
+        str: &str,
+        size: f32,
+        position: TextPosition,
+        //TODO:make the error useful
+    ) -> Result<(), ()> {
         let glyphs = TEXT_LAYOUT.shape_text(str, size, crate::FontType::Default);
+        let position = match position {
+            TextPosition::Center => {
+                let text_width: u32 = glyphs
+                    .last()
+                    .map(|g| g.x as u32 + g.width as u32)
+                    .unwrap_or(0);
+                let text_height: u32 = glyphs.iter().map(|g| g.height as u32).max().unwrap_or(0);
+                //The text layout system gives some vertical offset to the text. We should subtract it from our
+                //position.y
+                let text_y_offset: u32 = glyphs.iter().map(|g| g.y as u32).min().unwrap_or(0);
+                let margin = (
+                    self.block.width() as i32 - text_width as i32,
+                    self.block.height() as i32 - text_height as i32,
+                );
+                if margin.0 < 0 || margin.1 < 0 {
+                    println!("Tried to print ovesized text");
+                    return Err(());
+                }
+                let position = Vec2 {
+                    x: margin.0 as u32 / 2,
+                    y: margin.1 as u32 / 2 - dbg!(text_y_offset),
+                };
+                position
+            }
+            TextPosition::Right { y } => {
+                let text_width: u32 = glyphs.iter().map(|g| g.width as u32).sum();
+                Vec2 {
+                    x: self.block.width() - text_width,
+                    y,
+                }
+            }
+            TextPosition::Left { y } => Vec2::from_y(y),
+            TextPosition::Absolute(position) => position,
+        };
+        self.draw_text_at(position, &glyphs, size)
+    }
+    fn draw_text_at(
+        &mut self,
+        position: Vec2,
+        glyphs: &[GlyphPosition],
+        size: f32,
+        //TODO:make the error useful
+    ) -> Result<(), ()> {
+        let mut res = Ok(());
         for glyph in glyphs {
             let (metrics, bitmap) = crate::FONTS[0].rasterize(glyph.parent, size);
             let stride = metrics.width;
