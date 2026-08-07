@@ -1,13 +1,57 @@
 mod ram;
 mod widget;
 const BAR_HEIGHT: u32 = 20;
-use std::mem;
+use std::{
+    mem,
+    sync::{LazyLock, Mutex},
+};
 
+use fontdue::layout::{GlyphPosition, TextStyle};
 use surface_init::*;
 use widget::*;
 
-struct BarDrawerState<'a> {
-    fonts: &'a [fontdue::Font],
+pub(crate) static FONTS: LazyLock<Box<[fontdue::Font]>> = LazyLock::new(|| {
+    Box::new([fontdue::Font::from_bytes(
+        include_bytes!("../fonts/0xproto-ascii.ttf") as &[u8],
+        fontdue::FontSettings::default(),
+    )
+    .unwrap()])
+});
+
+pub(crate) struct TextLayout {
+    layout: Mutex<fontdue::layout::Layout>,
+}
+
+pub enum FontType {
+    Default,
+    Bold,
+    Italic,
+}
+
+impl TextLayout {
+    pub(crate) fn shape_text(&self, text: &str, px: f32, font: FontType) -> Vec<GlyphPosition> {
+        let mut layout = self.layout.lock().unwrap();
+        let font_index = match font {
+            //TODO: add more once more fonts exist
+            _ => 0,
+        };
+        layout.append(FONTS.as_ref(), &TextStyle::new(text, px, font_index));
+        let glyphs = layout.glyphs().clone();
+        layout.clear();
+        glyphs
+    }
+    fn new() -> Self {
+        Self {
+            layout: Mutex::new(fontdue::layout::Layout::new(
+                fontdue::layout::CoordinateSystem::PositiveYDown,
+            )),
+        }
+    }
+}
+
+pub(crate) static TEXT_LAYOUT: LazyLock<TextLayout> = LazyLock::new(|| TextLayout::new());
+
+struct BarDrawerState {
     widgets: Box<WidgetTable>,
     first_render: bool,
 }
@@ -41,10 +85,9 @@ impl WidgetTable {
     }
 }
 
-impl<'a> BarDrawerState<'a> {
-    fn new(fonts: &'a [fontdue::Font]) -> Self {
+impl BarDrawerState {
+    fn new() -> Self {
         Self {
-            fonts,
             first_render: true,
             widgets: Box::new(WidgetTable::default()),
         }
@@ -97,7 +140,7 @@ fn draw_bg(buffer: &mut PixBuf) {
     }
 }
 
-impl Drawer for BarDrawerState<'_> {
+impl Drawer for BarDrawerState {
     fn draw(&mut self, buffer: &mut [u8], width: usize, height: usize) -> Vec<Damage> {
         let mut buffer = PixBuf::new(buffer, width, height);
         let mut damage = vec![];
@@ -114,13 +157,8 @@ impl Drawer for BarDrawerState<'_> {
 }
 
 fn main() {
-    let fonts = Box::leak(Box::new([fontdue::Font::from_bytes(
-        include_bytes!("../fonts/0xproto-ascii.ttf") as &[u8],
-        fontdue::FontSettings::default(),
-    )
-    .unwrap()]));
-    let mut state = Box::new(BarDrawerState::new(fonts));
+    let mut state = Box::new(BarDrawerState::new());
     let mut wl_data = init_bar_surface(BAR_HEIGHT);
-    state.add_widget(Box::new(ram::Ram::new(state.fonts)), &wl_data);
+    state.add_widget(Box::new(ram::Ram::new()), &wl_data);
     wl_data.render_loop(state);
 }

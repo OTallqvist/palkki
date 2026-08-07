@@ -1,15 +1,12 @@
 use crate::DrawableBlock;
 use crate::Positioning;
 use crate::Widget;
-use fontdue::layout::{CoordinateSystem, Layout};
 use std::{
     fs::File,
     io::{Read, Seek},
 };
 use surface_init::*;
-pub(super) struct Ram<'a> {
-    layout: Layout,
-    fonts: &'a [fontdue::Font],
+pub(super) struct Ram {
     meminfo: File,
     total_ram: usize,
     last_ram_usage: usize,
@@ -24,15 +21,13 @@ fn get_total_ram(meminfo: &mut File) -> usize {
     parse_meminfo_line(lines.next().unwrap())
 }
 
-impl<'a> Ram<'a> {
-    pub(super) fn new(fonts: &'a [fontdue::Font]) -> Self {
+impl Ram {
+    pub(super) fn new() -> Self {
         let mut meminfo = File::open("/proc/meminfo").unwrap();
         let total_ram = get_total_ram(&mut meminfo);
         Self {
             last_ram_usage: 0,
             total_ram,
-            layout: Layout::new(CoordinateSystem::PositiveYUp),
-            fonts,
             meminfo,
         }
     }
@@ -73,7 +68,7 @@ fn ram_usage_to_str(usage: f32) -> String {
     str
 }
 
-impl Widget for Ram<'_> {
+impl Widget for Ram {
     fn postioning(&self) -> Positioning {
         Positioning::RightAlign { width: 60 }
     }
@@ -82,7 +77,7 @@ impl Widget for Ram<'_> {
             return;
         };
         let usage = ram_usage_to_str(usage);
-        block.draw_str(&self.fonts[0], 14., &usage, Vec2 { x: 5, y: 5 });
+        let _ = block.draw_text(&usage, 14., Vec2 { x: 5, y: 3 });
         block.damage = Damage::from_0_0(block.block.size)
     }
 }
