@@ -12,6 +12,7 @@ pub(super) struct Ram<'a> {
     fonts: &'a [fontdue::Font],
     meminfo: File,
     total_ram: usize,
+    last_ram_usage: usize,
 }
 
 fn get_total_ram(meminfo: &mut File) -> usize {
@@ -28,6 +29,7 @@ impl<'a> Ram<'a> {
         let mut meminfo = File::open("/proc/meminfo").unwrap();
         let total_ram = get_total_ram(&mut meminfo);
         Self {
+            last_ram_usage: 0,
             total_ram,
             layout: Layout::new(CoordinateSystem::PositiveYUp),
             fonts,
@@ -35,14 +37,23 @@ impl<'a> Ram<'a> {
         }
     }
     ///Ram usage in GB
-    fn get_ram_usage(&mut self) -> f32 {
+    ///Returns None if the value didn't change since last update. And therefor the widget does not
+    ///need to update anything
+    fn get_ram_usage(&mut self) -> Option<f32> {
         let mut buf = [0; 150];
         self.meminfo.read_exact(&mut buf).unwrap();
         self.meminfo.rewind().unwrap();
         let buf = str::from_utf8(buf.as_ref()).unwrap();
         let mut lines = buf.lines().skip(2);
         let avail_ram = parse_meminfo_line(lines.next().unwrap());
-        (self.total_ram - avail_ram) as f32 / 1_000_000.0
+        let usage = (self.total_ram - avail_ram) * 1000 / 1_048_576 / 8; //conversion to 8MiB
+        //The conversion is done like this because ram usage is displayed with precision of 10MiB so
+        //any smaller change won't matter. 8MiB is used specifically because the math is easier
+        if self.last_ram_usage == usage {
+            None
+        } else {
+            Some(usage as f32 / 128.) //conversion to GiB
+        }
     }
 }
 
@@ -57,15 +68,21 @@ fn parse_meminfo_line(line: &str) -> usize {
     number.parse::<usize>().unwrap()
 }
 
+fn ram_usage_to_str(usage: f32) -> String {
+    let str = format!("{:.2}Gi", usage);
+    str
+}
+
 impl Widget for Ram<'_> {
     fn postioning(&self) -> Positioning {
-        Positioning::LeftAlign { width: 100 }
+        Positioning::LeftAlign { width: 60 }
     }
     fn redraw(&mut self, block: &mut DrawableBlock) {
-        for line in 0..block.block.size.y {
-            let line = block.mutate_line(Vec2::new(0, line), block.block.size.x as usize);
-            line.iter_mut().for_each(|px| px.g = 255);
-        }
+        let Some(usage) = self.get_ram_usage() else {
+            return;
+        };
+        let usage = ram_usage_to_str(usage);
+        block.draw_str(&self.fonts[0], 14., &usage, Vec2 { x: 5, y: 5 });
         block.damage = Damage::from_0_0(block.block.size)
     }
 }

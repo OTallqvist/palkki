@@ -8,7 +8,6 @@ use widget::*;
 
 struct BarDrawerState<'a> {
     fonts: &'a [fontdue::Font],
-    offset: usize,
     first_render: bool,
     widgets: Vec<(Box<dyn Widget>, Block)>,
 }
@@ -17,7 +16,6 @@ impl<'a> BarDrawerState<'a> {
     fn new(fonts: &'a [fontdue::Font]) -> Self {
         Self {
             fonts,
-            offset: 0,
             first_render: true,
             widgets: vec![],
         }
@@ -42,31 +40,6 @@ fn draw_bg(buffer: &mut PixBuf) {
     }
 }
 
-fn draw_moving_line(buffer: &mut PixBuf, state: &mut BarDrawerState) -> Damage {
-    let line_width = 10;
-    for y in 0..buffer.height {
-        let line = buffer.mutate_line(Vec2::new(state.offset as u32, y as u32), {
-            let overflow = (state.offset as i32 + line_width as i32 - buffer.width as i32).max(0);
-            line_width - overflow as usize
-        });
-        line.iter_mut().for_each(|px| {
-            *px = Pixel {
-                b: 0xFF,
-                g: 0x00,
-                r: 0x00,
-                a: 0xFF,
-            }
-        });
-    }
-    let step = 17;
-    let line_damage = Damage::new(
-        Vec2::new((state.offset - step).min(buffer.width - step) as u32, 0),
-        Vec2::new(line_width as u32 + step as u32, buffer.height as u32),
-    );
-    state.offset = (state.offset + step) % buffer.width;
-    line_damage
-}
-
 impl Drawer for BarDrawerState<'_> {
     fn draw(&mut self, buffer: &mut [u8], width: usize, height: usize) -> Vec<Damage> {
         let mut buffer = PixBuf::new(buffer, width, height);
@@ -89,7 +62,7 @@ impl Drawer for BarDrawerState<'_> {
 
 fn main() {
     let fonts = Box::leak(Box::new([fontdue::Font::from_bytes(
-        include_bytes!("/usr/share/fonts/arial/arial.ttf") as &[u8],
+        include_bytes!("../fonts/0xproto-ascii.ttf") as &[u8],
         fontdue::FontSettings::default(),
     )
     .unwrap()]));

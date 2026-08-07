@@ -1,10 +1,17 @@
 use crate::{Damage, Vec2};
+#[derive(Clone)]
 #[repr(C)]
 pub(crate) struct Pixel {
     pub b: u8,
     pub g: u8,
     pub r: u8,
     pub a: u8,
+}
+
+impl Pixel {
+    pub(crate) fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self { b, g, r, a: 255 }
+    }
 }
 
 pub(crate) struct PixBuf<'a> {
@@ -97,5 +104,48 @@ impl DrawableBlock<'_, '_> {
         assert!(position.x + len as u32 <= self.block.size.x);
         let idx = self.buf.index_from_position(position);
         &mut self.buf.buf[idx..idx + len]
+    }
+    pub(crate) fn vert_center(&self) -> u32 {
+        self.block.size.y / 2
+    }
+    pub(crate) fn draw_str(&mut self, font: &fontdue::Font, size: f32, str: &str, position: Vec2) {
+        let mut char_offset = 0;
+        for char in str.chars() {
+            let (metrics, bitmap) = font.rasterize(char, size);
+            let stride = metrics.width;
+            let char_pos = Vec2 {
+                x: position.x + char_offset,
+                y: position.y,
+            };
+            if char_pos.x + metrics.width as u32 > self.block.width() {
+                break;
+            }
+            for y in 0..metrics.height {
+                if y as u32 + char_pos.y > self.block.height() {
+                    println!(
+                        "broke at iteration {y} with coordinate {}",
+                        char_pos.y + y as u32
+                    );
+                    break;
+                }
+                let buf_line = self.mutate_line(char_pos + Vec2::from_y(y as u32), metrics.width);
+                buf_line.iter_mut().enumerate().for_each(|(x, px)| {
+                    let bitmap_val = bitmap[stride * y + x];
+                    *px = Pixel {
+                        b: bitmap_val,
+                        g: bitmap_val,
+                        r: bitmap_val,
+                        a: 255,
+                    }
+                });
+            }
+            char_offset += metrics.width as u32;
+        }
+    }
+    pub(crate) fn set_bg_color(&mut self, color: Pixel) {
+        for line in 0..self.block.size.y {
+            let line = self.mutate_line(Vec2::new(0, line), self.block.size.x as usize);
+            line.iter_mut().for_each(|px| *px = color.clone());
+        }
     }
 }
