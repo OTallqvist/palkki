@@ -1,3 +1,4 @@
+mod clock;
 mod ram;
 mod widget;
 const BAR_HEIGHT: u32 = 20;
@@ -87,7 +88,7 @@ impl BarDrawerState {
     }
     fn add_widget(&mut self, widget: Box<dyn Widget>, wl_data: &WlData) {
         use crate::Positioning as P;
-        match widget.postioning() {
+        match widget.postioning(wl_data.surface_size()) {
             P::RightAlign { width } => {
                 let offset = Vec2::from_x(
                     self.widgets
@@ -172,6 +173,7 @@ impl Drawer for BarDrawerState {
 fn main() {
     let mut state = Box::new(BarDrawerState::new());
     let mut wl_data = init_bar_surface(BAR_HEIGHT);
-    state.add_widget(Box::new(ram::Ram::new()), &wl_data);
+    state.add_widget(ram::Ram::new(), &wl_data);
+    state.add_widget(clock::Clock::new(), &wl_data);
     wl_data.render_loop(state);
 }
