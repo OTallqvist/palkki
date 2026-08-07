@@ -8,8 +8,37 @@ use widget::*;
 
 struct BarDrawerState<'a> {
     fonts: &'a [fontdue::Font],
+    widgets: Box<WidgetTable>,
     first_render: bool,
-    widgets: Vec<(Box<dyn Widget>, Block)>,
+}
+
+#[derive(Default)]
+struct WidgetTable {
+    left: Vec<(Box<dyn Widget>, Block)>,
+    right: Vec<(Box<dyn Widget>, Block)>,
+    center: Vec<(Box<dyn Widget>, Block)>,
+}
+
+impl WidgetTable {
+    fn draw_widgets(&mut self, buffer: &mut PixBuf) -> Vec<Damage> {
+        let mut damage = vec![];
+        for (widget, block) in self.right.iter_mut() {
+            let mut block = block.draw(buffer);
+            widget.redraw(&mut block);
+            damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
+        }
+        for (widget, block) in self.center.iter_mut() {
+            let mut block = block.draw(buffer);
+            widget.redraw(&mut block);
+            damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
+        }
+        for (widget, block) in self.left.iter_mut() {
+            let mut block = block.draw(buffer);
+            widget.redraw(&mut block);
+            damage.push(mem::take(&mut block.damage.offset(block.block.offset)));
+        }
+        damage
+    }
 }
 
 impl<'a> BarDrawerState<'a> {
@@ -17,12 +46,40 @@ impl<'a> BarDrawerState<'a> {
         Self {
             fonts,
             first_render: true,
-            widgets: vec![],
+            widgets: Box::new(WidgetTable::default()),
         }
     }
     fn add_widget(&mut self, widget: Box<dyn Widget>, wl_data: &WlData) {
-        let block = Block::for_widget(widget.as_ref(), wl_data.surface_size());
-        self.widgets.push((widget, block));
+        use crate::Positioning as P;
+        match widget.postioning() {
+            P::RightAlign { width } => {
+                let offset = Vec2::from_x(
+                    self.widgets
+                        .right
+                        .last()
+                        .map(|(_, block)| block.offset.x - width)
+                        .unwrap_or(wl_data.surface_size().x - width),
+                );
+                self.widgets.right.push((
+                    widget,
+                    Block::new(offset, Vec2::new(width, wl_data.surface_size().y)),
+                ));
+            }
+            P::LeftAlign { width } => {
+                let offset = Vec2::from_x(
+                    self.widgets
+                        .left
+                        .iter()
+                        .map(|(_, block)| block.width())
+                        .sum(),
+                );
+                self.widgets.left.push((
+                    widget,
+                    Block::new(offset, Vec2::new(width, wl_data.surface_size().y)),
+                ));
+            }
+            _ => todo!(),
+        };
     }
 }
 
@@ -45,11 +102,7 @@ impl Drawer for BarDrawerState<'_> {
         let mut buffer = PixBuf::new(buffer, width, height);
         let mut damage = vec![];
         draw_bg(&mut buffer);
-        for (widget, block) in self.widgets.iter_mut() {
-            let mut block = block.draw(&mut buffer);
-            widget.redraw(&mut block);
-            damage.push(mem::take(&mut block.damage));
-        }
+        damage.append(&mut self.widgets.draw_widgets(&mut buffer));
         // let line_damage = draw_moving_line(&mut buffer, self);
         if self.first_render {
             self.first_render = false;

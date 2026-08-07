@@ -75,7 +75,7 @@ fn ram_usage_to_str(usage: f32) -> String {
 
 impl Widget for Ram<'_> {
     fn postioning(&self) -> Positioning {
-        Positioning::LeftAlign { width: 60 }
+        Positioning::RightAlign { width: 60 }
     }
     fn redraw(&mut self, block: &mut DrawableBlock) {
         let Some(usage) = self.get_ram_usage() else {

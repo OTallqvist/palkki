@@ -47,8 +47,6 @@ pub(crate) enum Positioning {
     LeftAlign { width: u32 },
     RightAlign { width: u32 },
     Center { width: u32 },
-    Absolute { pos: Vec2, size: Vec2 },
-    Relative { pos: (f32, f32), size: (f32, f32) },
 }
 
 pub(crate) trait Widget {
@@ -63,19 +61,8 @@ pub(crate) struct Block {
 }
 
 impl<'b, 'buffer> Block {
-    pub(crate) fn for_widget<W: Widget + ?Sized>(widget: &W, dimensions: Vec2) -> Block {
-        use crate::Positioning as P;
-        //TODO: Actual layout stuff
-        match widget.postioning() {
-            P::LeftAlign { width } => Block {
-                offset: Vec2 { x: 0, y: 0 },
-                size: Vec2 {
-                    x: width,
-                    y: dimensions.y,
-                },
-            },
-            _ => todo!(),
-        }
+    pub(super) fn new(offset: Vec2, size: Vec2) -> Self {
+        Self { offset, size }
     }
     pub(crate) fn draw(&'b self, buf: &'b mut PixBuf<'buffer>) -> DrawableBlock<'b, 'buffer> {
         DrawableBlock {
@@ -100,8 +87,10 @@ pub(crate) struct DrawableBlock<'b, 'buffer> {
 
 impl DrawableBlock<'_, '_> {
     pub(crate) fn mutate_line(&mut self, mut position: Vec2, len: usize) -> &mut [Pixel] {
+        if !(position.x + len as u32 <= self.block.width()) {
+            panic!("{} + {len} > {}", position.x, self.block.width())
+        }
         position += self.block.offset;
-        assert!(position.x + len as u32 <= self.block.size.x);
         let idx = self.buf.index_from_position(position);
         &mut self.buf.buf[idx..idx + len]
     }
