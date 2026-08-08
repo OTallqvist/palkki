@@ -15,3 +15,4 @@ wayland-protocols-wlr = { version = "0.2", features = ["client"] }
 surface_init = { path = "crates/surface_init"}
 fontdue = "0.9.4"
 time = { version = "0.3.55", features = ["local-offset"] }
+dbg_if = { git = "https://github.com/OTallqvist/dbg_if.git"}
