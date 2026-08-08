@@ -1,4 +1,4 @@
-use fontdue::layout::{GlyphPosition, HorizontalAlign::Left, Layout};
+use fontdue::layout::GlyphPosition;
 
 use crate::{Damage, TEXT_LAYOUT, Vec2};
 #[derive(Clone)]
@@ -42,10 +42,6 @@ impl<'a> PixBuf<'a> {
         let idx = self.index_from_position(position);
         assert!(position.x as usize + len <= self.width);
         &mut self.buf[idx..idx + len]
-    }
-    pub(crate) fn mutate_pixel(&mut self, position: Vec2) -> &mut Pixel {
-        let idx = self.index_from_position(position);
-        self.buf.get_mut(idx).unwrap()
     }
 }
 
@@ -142,11 +138,10 @@ impl DrawableBlock<'_, '_> {
                     println!("Tried to print ovesized text");
                     return Err(());
                 }
-                let position = Vec2 {
+                Vec2 {
                     x: margin.0 as u32 / 2,
-                    y: margin.1 as u32 / 2 - dbg!(text_y_offset),
-                };
-                position
+                    y: margin.1 as u32 / 2 - text_y_offset,
+                }
             }
             TextPosition::Right { y } => {
                 let text_width: u32 = glyphs.iter().map(|g| g.width as u32).sum();

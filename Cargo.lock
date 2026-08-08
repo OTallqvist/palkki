@@ -262,12 +262,8 @@ version = "0.1.0"
 dependencies = [
  "dbg_if",
  "fontdue",
- "memmap",
  "surface_init",
  "time",
- "wayland-client",
- "wayland-protocols",
- "wayland-protocols-wlr",
 ]
 
 [[package]]

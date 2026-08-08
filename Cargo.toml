@@ -8,11 +8,25 @@ resolver = "3"
 members = ["crates/*"]
 
 [dependencies]
-memmap = "0.7.0"
-wayland-client = "0.31.15"
-wayland-protocols = { version = "0.31", features = ["client"] }
-wayland-protocols-wlr = { version = "0.2", features = ["client"] }
 surface_init = { path = "crates/surface_init"}
 fontdue = "0.9.4"
 time = { version = "0.3.55", features = ["local-offset"] }
 dbg_if = { git = "https://github.com/OTallqvist/dbg_if.git"}
+
+# Enable a small amount of optimization in the dev profile.
+[profile.dev]
+opt-level = 2
+
+# Enable a large amount of optimization in the dev profile for dependencies.
+[profile.dev.package."*"]
+opt-level = 3
+
+# Enable more optimization in the release profile at the cost of compile time.
+[profile.release]
+# Compile the entire crate as one unit.
+# Slows compile times, marginal improvements.
+codegen-units = 1
+# Do a second optimization pass over the entire program, including dependencies.
+# Slows compile times, marginal improvements.
+lto = "fat"
+
