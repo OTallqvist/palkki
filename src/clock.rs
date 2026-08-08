@@ -1,6 +1,6 @@
 use surface_init::{Damage, Vec2};
 
-use crate::widget::{Positioning, TextPosition, Widget};
+use crate::widget::{Pixel, Positioning, TextPosition, Widget};
 
 pub(super) struct Clock {
     last_time: time::Time,
@@ -31,10 +31,11 @@ impl Widget for Clock {
             return;
         }
         self.last_time = time_now.time();
+        block.set_bg_color(Pixel::rgb(0x30, 0x30, 0x30));
         let mut time_str = time_now.time().truncate_to_second().to_string();
         //for some reason the string contains a ".0" at the end
         time_str.truncate(time_str.len() - 2);
-        let _ = block.draw_text(&time_str, 10., TextPosition::Center);
+        let _ = block.draw_text(&time_str, 12., TextPosition::Center);
         block.damage = Damage::from_0_0(block.block.size)
     }
 }

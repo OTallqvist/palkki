@@ -1,6 +1,7 @@
 use crate::DrawableBlock;
 use crate::Positioning;
 use crate::Widget;
+use crate::widget::Pixel;
 use crate::widget::TextPosition;
 use std::{
     fs::File,
@@ -65,20 +66,21 @@ fn parse_meminfo_line(line: &str) -> usize {
 }
 
 fn ram_usage_to_str(usage: f32) -> String {
-    let str = format!("{:.2}Gi", usage);
+    let str = format!("{:.2}GiB", usage);
     str
 }
 
 impl Widget for Ram {
     fn postioning(&self, _: Vec2) -> Positioning {
-        Positioning::RightAlign { width: 60 }
+        Positioning::RightAlign { width: 70 }
     }
     fn redraw(&mut self, block: &mut DrawableBlock) {
         let Some(usage) = self.get_ram_usage() else {
             return;
         };
+        block.set_bg_color(Pixel::rgb(0x30, 0x30, 0x30));
         let usage = ram_usage_to_str(usage);
-        let _ = block.draw_text(&usage, 14., TextPosition::Absolute(Vec2 { x: 0, y: 3 }));
+        let _ = block.draw_text(&usage, 12., TextPosition::Center);
         block.damage = Damage::from_0_0(block.block.size)
     }
 }
