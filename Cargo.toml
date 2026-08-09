@@ -1,5 +1,5 @@
 [package]
-name = "statusbar"
+name = "palkki"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,7 +10,6 @@ members = ["crates/*"]
 [dependencies]
 surface_init = { path = "crates/surface_init"}
 fontdue = "0.9.4"
-time = { version = "0.3.55", features = ["local-offset"] }
 dbg_if = { git = "https://github.com/OTallqvist/dbg_if.git"}
 
 # Enable a small amount of optimization in the dev profile.
