@@ -1,12 +1,12 @@
+use common::Vec2;
 use fontdue::layout::GlyphPosition;
 use std::{
     mem,
     ops::{Mul, MulAssign},
     time::{Duration, Instant},
 };
-use surface_init::Vec2;
 
-use crate::{Damage, TEXT_LAYOUT};
+use crate::{Rect, TEXT_LAYOUT};
 
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -55,7 +55,7 @@ impl WidgetData {
     ///Updates the widget if its update time has been exeeded
     fn update_widget(
         &mut self,
-        damage_list: &mut Vec<Damage>,
+        damage_list: &mut Vec<Rect>,
         current_time: &Instant,
         buffer: &mut PixBuf,
     ) {
@@ -92,7 +92,24 @@ pub(crate) struct WidgetTable {
 }
 
 impl WidgetTable {
-    pub fn draw_widgets(&mut self, buffer: &mut PixBuf) -> Vec<Damage> {
+    pub(crate) fn insert_widget(&mut self, table: &Positioning, widget: WidgetData) {
+        match table {
+            Positioning::LeftAlign { width: _ } => self.left.push(widget),
+            Positioning::RightAlign { width: _ } => self.right.push(widget),
+            Positioning::Absolute {
+                foreground,
+                offset: _,
+                width: _,
+            } => {
+                if *foreground {
+                    self.absolute_front.push(widget);
+                } else {
+                    self.absolute_back.push(widget);
+                }
+            }
+        }
+    }
+    pub(crate) fn draw_widgets(&mut self, buffer: &mut PixBuf) -> Vec<Rect> {
         let mut damage = vec![];
         let current_time = Instant::now();
         self.absolute_back
@@ -179,7 +196,7 @@ impl<'b, 'buffer> Block {
         DrawableBlock {
             block: self,
             buf,
-            damage: Damage::default(),
+            damage: Rect::default(),
         }
     }
 }
@@ -187,7 +204,7 @@ impl<'b, 'buffer> Block {
 pub struct DrawableBlock<'b, 'buffer> {
     pub block: &'b Block,
     buf: &'b mut PixBuf<'buffer>,
-    pub damage: Damage,
+    pub damage: Rect,
 }
 
 pub enum TextPosition {

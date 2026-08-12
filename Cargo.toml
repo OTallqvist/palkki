@@ -9,6 +9,7 @@ members = ["crates/*"]
 
 [dependencies]
 surface_init = { path = "crates/surface_init"}
+common = { path = "crates/common"}
 fontdue = "0.9.4"
 dbg_if = { git = "https://github.com/OTallqvist/dbg_if.git"}
 

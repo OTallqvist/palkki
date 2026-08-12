@@ -1,10 +1,10 @@
 pub mod widget;
+pub use common::{Rect, Vec2};
 use std::{
     sync::{LazyLock, Mutex},
     thread,
     time::Duration,
 };
-pub use surface_init::{Damage, Vec2};
 
 use fontdue::layout::{GlyphPosition, TextStyle};
 use surface_init::*;
@@ -73,7 +73,8 @@ impl Bar {
         if update_time > Duration::from_millis(100) && update_time < self.update_time {
             self.update_time = update_time;
         }
-        match widget.postioning(self.wl_data.surface_size()) {
+        let positioning = widget.postioning(self.wl_data.surface_size());
+        let widget = match positioning {
             P::RightAlign { width } => {
                 let offset = Vec2::from_x(
                     self.widgets
@@ -82,44 +83,38 @@ impl Bar {
                         .map(|widget| widget.position().x - width)
                         .unwrap_or(self.wl_data.surface_size().x - width),
                 );
-                self.widgets.right.push(WidgetData::new(
+                WidgetData::new(
                     widget,
                     Block::new(offset, Vec2::new(width, self.height())),
                     update_time,
-                ));
+                )
             }
             P::LeftAlign { width } => {
                 let offset =
                     Vec2::from_x(self.widgets.left.iter().map(|widget| widget.size().x).sum());
-                self.widgets.left.push(WidgetData::new(
+                WidgetData::new(
                     widget,
                     Block::new(offset, Vec2::new(width, self.height())),
                     update_time,
-                ));
+                )
             }
             P::Absolute {
                 offset,
                 width,
-                foreground,
-            } => {
-                let widget = WidgetData::new(
-                    widget,
-                    Block::new(
-                        Vec2::from_x(offset),
-                        Vec2 {
-                            x: width,
-                            y: self.wl_data.surface_size().y,
-                        },
-                    ),
-                    update_time,
-                );
-                if foreground {
-                    self.widgets.absolute_front.push(widget);
-                } else {
-                    self.widgets.absolute_back.push(widget);
-                }
-            }
+                foreground: _,
+            } => WidgetData::new(
+                widget,
+                Block::new(
+                    Vec2::from_x(offset),
+                    Vec2 {
+                        x: width,
+                        y: self.wl_data.surface_size().y,
+                    },
+                ),
+                update_time,
+            ),
         };
+        self.widgets.insert_widget(&positioning, widget);
     }
     pub fn run(mut self) {
         loop {
@@ -135,7 +130,7 @@ impl Bar {
     pub fn height(&self) -> u32 {
         self.wl_data.surface_size().y
     }
-    fn draw(&mut self, width: usize, height: usize) -> Vec<Damage> {
+    fn draw(&mut self, width: usize, height: usize) -> Vec<Rect> {
         let buffer = self.wl_data.frame_buffer();
         let mut buffer = PixBuf::new(buffer, width, height);
         let mut damage = vec![];
@@ -144,7 +139,7 @@ impl Bar {
         // let line_damage = draw_moving_line(&mut buffer, self);
         if self.first_render {
             self.first_render = false;
-            vec![Damage::from_0_0(Vec2::new(width as u32, height as u32))]
+            vec![Rect::from_0_0(Vec2::new(width as u32, height as u32))]
         } else {
             damage
         }

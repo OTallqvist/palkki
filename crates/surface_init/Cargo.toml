@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+common = { path = "../common/"}
 memmap = "0.7.0"
 nix = { version = "0.31.3", features = ["fs"] }
 wayland-client = "0.31.15"

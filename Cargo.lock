@@ -37,6 +37,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 
 [[package]]
+name = "common"
+version = "0.1.0"
+
+[[package]]
 name = "core_maths"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -155,6 +159,7 @@ dependencies = [
 name = "palkki"
 version = "0.1.0"
 dependencies = [
+ "common",
  "dbg_if",
  "fontdue",
  "surface_init",
@@ -222,6 +227,7 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 name = "surface_init"
 version = "0.1.0"
 dependencies = [
+ "common",
  "memmap",
  "nix",
  "wayland-client",
