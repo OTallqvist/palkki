@@ -210,8 +210,8 @@ pub struct DrawableBlock<'b, 'buffer> {
 pub enum TextPosition {
     Absolute(Vec2),
     Center,
-    Left { y: u32 },
-    Right { y: u32 },
+    Left { padd: u32, y: u32 },
+    Right { padd: u32, y: u32 },
 }
 
 #[derive(Debug)]
@@ -306,14 +306,14 @@ impl DrawableBlock<'_, '_> {
                     y: margin.1 as u32 / 2 - text_y_offset,
                 }
             }
-            TextPosition::Right { y } => {
-                let text_width: u32 = glyphs.iter().map(|g| g.width as u32).sum::<u32>() + 1;
+            TextPosition::Right { padd, y } => {
+                let text_width: u32 = glyphs.iter().map(|g| g.width as u32 + 1).sum::<u32>();
                 Vec2 {
-                    x: self.width() - text_width,
+                    x: self.width() - text_width - padd,
                     y,
                 }
             }
-            TextPosition::Left { y } => Vec2::from_y(y),
+            TextPosition::Left { padd, y } => Vec2::new(padd, y),
             TextPosition::Absolute(position) => position,
         };
         self.draw_text_at(position, &glyphs, size, color)?;
