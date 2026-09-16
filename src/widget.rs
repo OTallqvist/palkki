@@ -355,6 +355,14 @@ impl DrawableBlock<'_, '_> {
         }
         res
     }
+    pub fn set_bg_color_region(&mut self, region: Rect, color: Pixel) -> Result<(), BoundsError> {
+        let end_y = region.start.y + region.size.y;
+        for line in region.start.y..end_y {
+            let line = self.mutate_line(Vec2::new(region.start.x, line), region.size.x as usize)?;
+            line.iter_mut().for_each(|px| *px = color);
+        }
+        Ok(())
+    }
     pub fn set_bg_color(&mut self, color: Pixel) {
         for line in 0..self.block.size.y {
             let line = self
