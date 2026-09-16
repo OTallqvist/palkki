@@ -1,7 +1,7 @@
 use common::Vec2;
 use fontdue::layout::GlyphPosition;
 use std::{
-    mem,
+    fmt, mem,
     ops::{Mul, MulAssign},
     time::{Duration, Instant},
 };
@@ -222,6 +222,21 @@ pub enum BoundsError {
     XUnderflow,
 }
 
+impl fmt::Display for BoundsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                BoundsError::YOverflow => "YOverflow",
+                BoundsError::YUnderflow => "YUnderflow",
+                BoundsError::XOverflow => "XOverflow",
+                BoundsError::XUnderflow => "XUnderflow",
+            }
+        )
+    }
+}
+
 impl DrawableBlock<'_, '_> {
     ///Applies the blocks offset to the position. Returns Err if position is out of bounds.
     fn apply_offset_to(&self, position: &mut Vec2) -> Result<(), BoundsError> {
@@ -292,7 +307,7 @@ impl DrawableBlock<'_, '_> {
                 }
             }
             TextPosition::Right { y } => {
-                let text_width: u32 = glyphs.iter().map(|g| g.width as u32).sum();
+                let text_width: u32 = glyphs.iter().map(|g| g.width as u32).sum::<u32>() + 1;
                 Vec2 {
                     x: self.width() - text_width,
                     y,
