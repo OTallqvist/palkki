@@ -117,9 +117,14 @@ impl Bar {
         self.widgets.insert_widget(&positioning, widget);
     }
     pub fn run(mut self) {
+        let width = self.width() as usize;
+        let height = self.height() as usize;
+        let buffer = self.wl_data.frame_buffer();
+        let mut buffer = PixBuf::new(buffer, width, height);
+        draw_bg(&mut buffer);
         loop {
             self.wl_data.dispatch_pending().unwrap();
-            let damage = self.draw(self.width() as usize, self.height() as usize);
+            let damage = self.draw(width, height);
             self.wl_data.update_surface(damage);
             thread::sleep(self.update_time);
         }
@@ -134,9 +139,7 @@ impl Bar {
         let buffer = self.wl_data.frame_buffer();
         let mut buffer = PixBuf::new(buffer, width, height);
         let mut damage = vec![];
-        draw_bg(&mut buffer);
         damage.append(&mut self.widgets.draw_widgets(&mut buffer));
-        // let line_damage = draw_moving_line(&mut buffer, self);
         if self.first_render {
             self.first_render = false;
             vec![Rect::from_0_0(Vec2::new(width as u32, height as u32))]
