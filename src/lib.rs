@@ -56,7 +56,7 @@ pub struct Bar {
 }
 
 impl Bar {
-    pub fn new(height: u32) -> Self {
+    pub fn with_height(height: u32) -> Self {
         Self {
             first_render: true,
             wl_data: init_bar_surface(height),
