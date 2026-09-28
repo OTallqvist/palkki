@@ -49,6 +49,7 @@ pub(crate) struct WidgetData {
     block: Block,
     last_update: Instant,
     update_time: Duration,
+    name: &'static str,
 }
 
 impl WidgetData {
@@ -64,7 +65,17 @@ impl WidgetData {
         }
         self.last_update = *current_time;
         let mut block = self.block.draw(buffer);
-        self.widget.redraw(&mut block);
+        self.widget.redraw(&mut block).unwrap_or_else(|e| {
+            let clock = time::OffsetDateTime::now_local()
+                .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+            println!(
+                "[{:#02}:{:#02}:{:#02}] {}: {e}",
+                clock.hour(),
+                clock.minute(),
+                clock.second(),
+                self.name
+            );
+        });
         damage_list.push(mem::take(&mut block.damage.offset(block.block.offset)));
     }
     pub(crate) fn position(&self) -> Vec2 {
@@ -74,11 +85,14 @@ impl WidgetData {
         self.block.size
     }
     pub(crate) fn new(widget: Box<dyn Widget>, block: Block, update_time: Duration) -> Self {
+        let name = widget.name();
+        let update_duration = widget.update_time();
         Self {
             widget,
             block,
-            last_update: Instant::now() - Duration::from_secs(1000),
+            last_update: Instant::now() - update_duration,
             update_time,
+            name,
         }
     }
 }
@@ -168,7 +182,7 @@ pub enum Positioning {
 }
 
 pub trait Widget {
-    fn redraw(&mut self, block: &mut DrawableBlock);
+    fn redraw(&mut self, block: &mut DrawableBlock) -> anyhow::Result<()>;
     ///How the widget wants to be placed
     fn postioning(&self, bar_size: Vec2) -> Positioning;
     ///Time between updates of this widget.
@@ -177,6 +191,7 @@ pub trait Widget {
     fn update_time(&self) -> Duration {
         Duration::from_millis(1000)
     }
+    fn name(&self) -> &'static str;
 }
 
 #[derive(Debug)]
@@ -221,6 +236,8 @@ pub enum BoundsError {
     XOverflow,
     XUnderflow,
 }
+
+impl std::error::Error for BoundsError {}
 
 impl fmt::Display for BoundsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
