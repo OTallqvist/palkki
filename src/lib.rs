@@ -64,8 +64,10 @@ impl Bar {
             update_time: Duration::from_millis(1000),
         }
     }
-    pub fn add_widgets(&mut self, widgets: &[&dyn Fn() -> Box<dyn Widget>]) {
-        widgets.iter().for_each(|widget| self.add_widget(widget()));
+    pub fn add_widgets(&mut self, widgets: Box<[Box<dyn Widget>]>) {
+        widgets
+            .into_iter()
+            .for_each(|widget| self.add_widget(widget));
     }
     pub fn add_widget(&mut self, widget: Box<dyn Widget>) {
         use crate::Positioning as P;
