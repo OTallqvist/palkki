@@ -1,5 +1,6 @@
 pub mod widget;
 pub use common::{Rect, Vec2};
+use dbg_if::dbg_if_hash_ne;
 use std::{
     sync::{LazyLock, Mutex},
     thread,
@@ -48,11 +49,30 @@ impl TextLayout {
 
 pub static TEXT_LAYOUT: LazyLock<TextLayout> = LazyLock::new(TextLayout::new);
 
-pub struct Bar {
+struct BarConfig {
     widgets: Box<WidgetTable>,
+    bg_color: Pixel,
+}
+
+impl Default for BarConfig {
+    fn default() -> Self {
+        Self {
+            widgets: Box::new(WidgetTable::default()),
+            bg_color: Pixel {
+                b: 0,
+                g: 0,
+                r: 0,
+                a: 200,
+            },
+        }
+    }
+}
+
+pub struct Bar {
     wl_data: WlData,
     first_render: bool,
     update_time: Duration,
+    config: BarConfig,
 }
 
 impl Bar {
@@ -60,7 +80,7 @@ impl Bar {
         Self {
             first_render: true,
             wl_data: init_bar_surface(height),
-            widgets: Box::new(WidgetTable::default()),
+            config: BarConfig::default(),
             update_time: Duration::from_millis(1000),
         }
     }
@@ -68,6 +88,9 @@ impl Bar {
         widgets
             .into_iter()
             .for_each(|widget| self.add_widget(widget));
+    }
+    pub fn set_bg_color(&mut self, color: Pixel) {
+        self.config.bg_color = color
     }
     pub fn add_widget(&mut self, widget: Box<dyn Widget>) {
         use crate::Positioning as P;
@@ -79,7 +102,8 @@ impl Bar {
         let widget = match positioning {
             P::RightAlign { width } => {
                 let offset = Vec2::from_x(
-                    self.widgets
+                    self.config
+                        .widgets
                         .right
                         .last()
                         .map(|widget| widget.position().x - width)
@@ -92,8 +116,14 @@ impl Bar {
                 )
             }
             P::LeftAlign { width } => {
-                let offset =
-                    Vec2::from_x(self.widgets.left.iter().map(|widget| widget.size().x).sum());
+                let offset = Vec2::from_x(
+                    self.config
+                        .widgets
+                        .left
+                        .iter()
+                        .map(|widget| widget.size().x)
+                        .sum(),
+                );
                 WidgetData::new(
                     widget,
                     Block::new(offset, Vec2::new(width, self.height())),
@@ -116,7 +146,7 @@ impl Bar {
                 update_time,
             ),
         };
-        self.widgets.insert_widget(&positioning, widget);
+        self.config.widgets.insert_widget(&positioning, widget);
     }
     pub fn run(mut self) {
         let width = self.width() as usize;
@@ -141,7 +171,7 @@ impl Bar {
         let buffer = self.wl_data.frame_buffer();
         let mut buffer = PixBuf::new(buffer, width, height);
         let mut damage = vec![];
-        damage.append(&mut self.widgets.draw_widgets(&mut buffer));
+        damage.append(&mut self.config.widgets.draw_widgets(&mut buffer));
         if self.first_render {
             self.first_render = false;
             vec![Rect::from_0_0(Vec2::new(width as u32, height as u32))]
@@ -159,7 +189,7 @@ fn draw_bg(buffer: &mut PixBuf) {
                 b: 0x00,
                 g: 0x00,
                 r: 0x00,
-                a: 0xFF,
+                a: 0xbf,
             }
         }
     }
